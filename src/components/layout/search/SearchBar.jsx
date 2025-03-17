@@ -4,14 +4,26 @@ import DatePicker from './DatePicker';
 import GuestsPicker from './GuestsPicker';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { useSearchParams } from 'react-router-dom';
 import { Search, MapPin, Calendar, Users } from "lucide-react";
 
 const SearchBar = ({ onSearch }) => {  
-  const [address, setAddress] = useState('');
-  const [dateRange, setDateRange] = useState({ from: null, to: null });
-  const [guests, setGuests] = useState({ adults: 1, children: 0, infants: 0 });
   const [activeSection, setActiveSection] = useState(null);
   const searchBarRef = useRef(null);
+
+  const [searchParams] = useSearchParams();
+  
+  // 从 URL 参数初始化状态
+  const [address, setAddress] = useState(searchParams.get('address') || '');
+  const [dateRange, setDateRange] = useState({ 
+    from: searchParams.get('from') ? new Date(searchParams.get('from')) : null, 
+    to: searchParams.get('to') ? new Date(searchParams.get('to')) : null 
+  });
+  const [guests, setGuests] = useState({ 
+    adults: parseInt(searchParams.get('adults') || '1'), 
+    children: parseInt(searchParams.get('children') || '0'), 
+    infants: parseInt(searchParams.get('infants') || '0') 
+  });
   
   useEffect(() => {
     const handleClickOutside = (event) => {

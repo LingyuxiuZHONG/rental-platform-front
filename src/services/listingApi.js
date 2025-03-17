@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 
-const API_BASE_URL = '/api';
+const API_BASE_URL = '/api/listings';
 
 // 创建axios实例
 const apiClient = axios.create({
@@ -31,14 +31,25 @@ const apiClient = axios.create({
 // 搜索房源的API函数
 export const searchListings = async (searchParams) => {
   try {
-    const response = await apiClient.post('/listings/search', searchParams);
-    return response.data;
+    const response = await apiClient.post('/search', searchParams);
+    return response.data.data;
   } catch (error) {
     console.error('搜索房源失败:', error);
     throw error;
   }
 };
 
+export const updateFavorite = async (id, favoriteStatus) => {
+  try {
+    const response = await apiClient.put(`/${id}/favorite`, {
+      isFavorite: favoriteStatus
+    });
+    return response.data.data;
+  } catch (error) {
+    console.error('更新收藏状态失败:', error);
+    throw error;
+  }
+};
 
 
   

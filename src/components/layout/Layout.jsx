@@ -12,10 +12,12 @@ const Layout = ({ children }) => {
     document.documentElement.classList.toggle('dark');
   };
 
+  
+
   return (
     <div className="min-h-screen flex flex-col">
       {/* 使用Header组件，并传入需要的props */}
-      <Header theme={theme} toggleTheme={toggleTheme} />
+      <Header theme={theme} toggleTheme={toggleTheme}/>
 
       {/* 主内容 */}
       <main className="flex-grow">

@@ -5,9 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { userLogin } from '@/services/userApi';
+import { useAuth } from '@/components/common/AuthProvider';
+import { ROLE_TYPE } from '@/components/common/Constants';
+
 
 const Login = () => {
   const navigate = useNavigate();
@@ -27,12 +30,14 @@ const Login = () => {
     }));
   };
 
-  const handleSubmit = async (e) => {
+  const { setCurrentUser } = useAuth();
+
+  const handleLogin = async (e) => {
     e.preventDefault();
     
-    // Validation
+    // 验证
     if (!formData.email || !formData.password) {
-      setError('Please fill in all required fields');
+      setError('请填写邮箱和密码');
       return;
     }
     
@@ -40,17 +45,26 @@ const Login = () => {
     setError('');
     
     try {
-      // Simulate API call
-      setTimeout(() => {
-        // Success case - redirect to home page
-        setLoading(false);
-        navigate('/');
-      }, 1500);
+      const response = await userLogin({
+        email: formData.email,
+        password: formData.password
+      });
       
-      // Error case would throw an error here
-    } catch (err) {
+      console.log('登录成功:', response);
+      setCurrentUser(response); 
+      
+      // 根据用户类型导航到不同页面
+      const roleType = response.roleType;
+      if (roleType === ROLE_TYPE.HOST) {
+        navigate('/host/dashboard');
+      } else {
+        navigate('/');
+      }
+    } catch (error) {
+      console.error('登录失败:', error);
+      setError('邮箱或密码不正确，请重试');
+    } finally {
       setLoading(false);
-      setError('Invalid email or password. Please try again.');
     }
   };
 
@@ -58,9 +72,9 @@ const Login = () => {
     <div className="flex items-center justify-center min-h-[80vh] px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">Sign in to your account</CardTitle>
+          <CardTitle className="text-2xl font-bold text-center">登录账户</CardTitle>
           <CardDescription className="text-center">
-            Enter your email and password to access your account
+            输入您的邮箱和密码登录
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -71,10 +85,10 @@ const Login = () => {
             </Alert>
           )}
           
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleLogin}>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">邮箱</Label>
                 <Input 
                   id="email"
                   name="email"
@@ -85,11 +99,12 @@ const Login = () => {
                   required
                 />
               </div>
+              
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password">密码</Label>
                   <Link to="/forgot-password" className="text-sm text-blue-600 hover:underline">
-                    Forgot password?
+                    忘记密码?
                   </Link>
                 </div>
                 <Input 
@@ -102,6 +117,7 @@ const Login = () => {
                   required
                 />
               </div>
+              
               <div className="flex items-center space-x-2">
                 <Checkbox 
                   id="rememberMe" 
@@ -111,40 +127,30 @@ const Login = () => {
                     setFormData(prev => ({ ...prev, rememberMe: checked }))}
                 />
                 <Label htmlFor="rememberMe" className="text-sm font-normal">
-                  Remember me for 30 days
+                  记住我
                 </Label>
               </div>
+              
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Signing in...' : 'Sign in'}
+                {loading ? '登录中...' : '登录'}
               </Button>
             </div>
           </form>
-
-          <div className="relative my-6">
+        </CardContent>
+        <CardFooter className="flex flex-col space-y-4">
+          <div className="relative w-full">
             <div className="absolute inset-0 flex items-center">
-              <Separator className="w-full" />
+              <span className="w-full border-t" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">
-                Or continue with
-              </span>
+              <span className="bg-white px-2 text-muted-foreground">或者</span>
             </div>
           </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <Button variant="outline" type="button" className="w-full">
-              Google
-            </Button>
-            <Button variant="outline" type="button" className="w-full">
-              Facebook
-            </Button>
-          </div>
-        </CardContent>
-        <CardFooter className="flex flex-col">
-          <p className="text-center text-sm mt-2">
-            Don't have an account?{' '}
+          
+          <p className="text-center text-sm">
+            还没有账户?{' '}
             <Link to="/register" className="text-blue-600 hover:underline">
-              Sign up
+              注册新账户
             </Link>
           </p>
         </CardFooter>

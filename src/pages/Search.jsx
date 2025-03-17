@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Search as SearchIcon, Filter, ChevronsUpDown, Loader } from "lucide-react";
-import { searchListings } from '@/services/listingApi';
+import { searchListings, updateFavorite } from '@/services/listingApi';
 
 // 导入拆分的组件
 import PropertyCard from './search/PropertyCard';
@@ -148,7 +148,7 @@ const Search = () => {
       const results = await searchListings(requestBody);
 
       // 确保结果是一个数组
-      const validResults = Array.isArray(results.data) ? results.data : [];
+      const validResults = Array.isArray(results) ? results : [];
       console.log('搜索结果', validResults);
       // const validResults = propertyExamples;
       setSearchResults(validResults);
@@ -203,13 +203,30 @@ const Search = () => {
   }, [searchCriteria, filters, performSearch]);
 
   // 切换收藏状态
-  const toggleFavorite = useCallback((id) => {
-    setSearchResults(results => 
-      results.map(item => 
+  const toggleFavorite = useCallback(async (id) => {
+    try {
+      // 找到当前项目并获取其反转后的收藏状态
+      const currentItem = searchResults.find(item => item.id === id);
+      const newFavoriteStatus = !currentItem.isFavorite;
+      
+      // 乐观更新UI
+      setSearchResults(results => results.map(item => 
+        item.id === id ? {...item, isFavorite: newFavoriteStatus} : item
+      ));
+      
+      // 调用API函数更新后端
+      await updateFavorite(id, newFavoriteStatus);
+      
+    } catch (error) {
+      // 如果请求失败，回滚UI状态
+      setSearchResults(results => results.map(item => 
         item.id === id ? {...item, isFavorite: !item.isFavorite} : item
-      )
-    );
-  }, []);
+      ));
+      
+      // 可以添加一些用户通知，如错误提示
+      console.error('收藏状态更新失败');
+    }
+  }, [searchResults]);
 
   // 跳转到房源详情
   const navigateToProperty = useCallback((id) => {

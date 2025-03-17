@@ -8,6 +8,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { userRegister } from '@/services/userApi';
+import { useAuth } from '@/components/common/AuthProvider';
+import { ROLE_TYPE } from '@/components/common/Constants';
+
 
 const Register = () => {
   const navigate = useNavigate();
@@ -17,6 +22,7 @@ const Register = () => {
     email: '',
     password: '',
     confirmPassword: '',
+    roleType: ROLE_TYPE.GUEST, // 默认为房客
     agreeTerms: false
   });
   const [loading, setLoading] = useState(false);
@@ -30,22 +36,31 @@ const Register = () => {
     }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleRoleTypeChange = (value) => {
+    setFormData(prev => ({
+      ...prev,
+      roleType: value
+    }));
+  };
+
+  const { setCurrentUser } = useAuth(); 
+
+  const handleRegister = async (e) => {
     e.preventDefault();
     
     // Validation
-    if (!formData.firstName || !formData.lastName || !formData.email || !formData.password) {
-      setError('Please fill in all required fields');
+    if (!formData.firstName || !formData.lastName || !formData.email || !formData.password || !formData.roleType) {
+      setError('请填写所有必填字段');
       return;
     }
     
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+      setError('两次输入的密码不匹配');
       return;
     }
     
     if (!formData.agreeTerms) {
-      setError('You must agree to the terms and conditions');
+      setError('您必须同意条款和条件');
       return;
     }
     
@@ -53,17 +68,29 @@ const Register = () => {
     setError('');
     
     try {
-      // Simulate API call
-      setTimeout(() => {
-        // Success case - redirect to login page
-        setLoading(false);
-        navigate('/login', { state: { message: 'Account created successfully! Please sign in.' } });
-      }, 1500);
+      const newUser = {
+        email: formData.email,
+        password: formData.password,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        roleType: formData.roleType
+      };
+      const response = await userRegister(newUser);
+      console.log('注册成功:', response);
+
+      setCurrentUser(response); 
       
-      // Error case would throw an error here
-    } catch (err) {
+      // 根据用户类型导航到不同的页面
+      if (formData.roleType === ROLE_TYPE.HOST) {
+        navigate('/host/dashboard');
+      } else {
+        navigate('/');
+      }
+    } catch (error) {
+      console.error('注册失败:', error);
+      setError('注册失败，请稍后再试');
+    } finally {
       setLoading(false);
-      setError('Failed to create account. Please try again.');
     }
   };
 
@@ -71,9 +98,9 @@ const Register = () => {
     <div className="flex items-center justify-center min-h-[80vh] px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">Create an account</CardTitle>
+          <CardTitle className="text-2xl font-bold text-center">创建账户</CardTitle>
           <CardDescription className="text-center">
-            Enter your information to create your account
+            输入您的信息以创建账户
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -84,26 +111,26 @@ const Register = () => {
             </Alert>
           )}
           
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleRegister}>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name</Label>
+                  <Label htmlFor="firstName">名字</Label>
                   <Input 
                     id="firstName"
                     name="firstName"
-                    placeholder="John"
+                    placeholder="三"
                     value={formData.firstName}
                     onChange={handleChange}
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name</Label>
+                  <Label htmlFor="lastName">姓氏</Label>
                   <Input 
                     id="lastName"
                     name="lastName"
-                    placeholder="Doe"
+                    placeholder="张"
                     value={formData.lastName}
                     onChange={handleChange}
                     required
@@ -112,7 +139,7 @@ const Register = () => {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">邮箱</Label>
                 <Input 
                   id="email"
                   name="email"
@@ -125,7 +152,7 @@ const Register = () => {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">密码</Label>
                 <Input 
                   id="password"
                   name="password"
@@ -138,7 +165,7 @@ const Register = () => {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Label htmlFor="confirmPassword">确认密码</Label>
                 <Input 
                   id="confirmPassword"
                   name="confirmPassword"
@@ -148,6 +175,24 @@ const Register = () => {
                   onChange={handleChange}
                   required
                 />
+              </div>
+              
+              <div className="space-y-2">
+                <Label>您是？</Label>
+                <RadioGroup
+                  value={formData.roleType}
+                  onValueChange={handleRoleTypeChange}
+                  className="flex gap-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value={ROLE_TYPE.GUEST} id="guest" />
+                    <Label htmlFor="guest" className="cursor-pointer">我是房客</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value={ROLE_TYPE.HOST} id="host" />
+                    <Label htmlFor="host" className="cursor-pointer">我是房东</Label>
+                  </div>
+                </RadioGroup>
               </div>
               
               <div className="flex items-center space-x-2">
@@ -160,44 +205,24 @@ const Register = () => {
                   required
                 />
                 <Label htmlFor="agreeTerms" className="text-sm font-normal">
-                  I agree to the{' '}
-                  <Link to="/terms" className="text-blue-600 hover:underline">terms of service</Link>
-                  {' '}and{' '}
-                  <Link to="/privacy" className="text-blue-600 hover:underline">privacy policy</Link>
+                  我同意{' '}
+                  <Link to="/terms" className="text-blue-600 hover:underline">服务条款</Link>
+                  {' '}和{' '}
+                  <Link to="/privacy" className="text-blue-600 hover:underline">隐私政策</Link>
                 </Label>
               </div>
               
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Creating account...' : 'Create account'}
+                {loading ? '创建账户中...' : '创建账户'}
               </Button>
             </div>
           </form>
-
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <Separator className="w-full" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">
-                Or continue with
-              </span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <Button variant="outline" type="button" className="w-full">
-              Google
-            </Button>
-            <Button variant="outline" type="button" className="w-full">
-              Facebook
-            </Button>
-          </div>
         </CardContent>
         <CardFooter className="flex flex-col">
           <p className="text-center text-sm mt-2">
-            Already have an account?{' '}
+            已有账户?{' '}
             <Link to="/login" className="text-blue-600 hover:underline">
-              Sign in
+              登录
             </Link>
           </p>
         </CardFooter>

@@ -16,16 +16,12 @@ const popularListings = [
 const Home = () => {
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="relative rounded-xl overflow-hidden h-96 mb-12">
-        <img 
-          src="/img/home-page-img.jpg" 
-          alt="Beautiful Rental Destination" 
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white p-4 z-10">
-          <h1 className="text-4xl font-bold mb-6 text-shadow-lg">探索全球独特的住宿</h1>
-          <p className="text-lg text-shadow-md">找到理想的居所</p>
-        </div>
+      <div className="relative rounded-xl overflow-hidden h-96 mb-12 z-0"> 
+        <img src="/img/home-page-img.jpg" alt="Beautiful Rental Destination" className="w-full h-full object-cover" /> 
+        <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white p-4"> 
+          <h1 className="text-4xl font-bold mb-6 text-shadow-lg">探索全球独特的住宿</h1> 
+          <p className="text-lg text-shadow-md">找到理想的居所</p> 
+        </div> 
       </div>
       
       {/* 热门房源 */}
