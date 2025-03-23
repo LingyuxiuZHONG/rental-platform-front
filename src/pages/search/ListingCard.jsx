@@ -7,28 +7,28 @@ import { MapPin, Bed, Bath, Home, Star, Heart } from "lucide-react";
 /**
  * 房产卡片组件，展示单个房源信息
  */
-const PropertyCard = ({ property, onFavoriteToggle, onCardClick }) => (
-  <div className="group" onClick={() => onCardClick(property.id)}>
+const ListingCard = ({ listing, onFavoriteToggle, onCardClick }) => (
+  <div className="group" onClick={() => onCardClick(listing.id)}>
     <Card className="overflow-hidden hover:shadow-md transition-shadow">
       <div className="relative">
         <img 
-          src={property.images?.[0] || "/api/placeholder/800/500"} 
-          alt={property.title}
+          src={listing.images?.[0] || "/api/placeholder/800/500"} 
+          alt={listing.title}
           className="w-full h-48 object-cover"
         />
         <Button
           variant="ghost"
           size="icon"
           className={`absolute top-2 right-2 h-8 w-8 rounded-full bg-white/70 hover:bg-white 
-            ${property.isFavorite ? 'text-red-500 hover:text-red-500' : 'text-gray-600 hover:text-gray-800'}`}                    
+            ${listing.isFavorite ? 'text-red-500 hover:text-red-500' : 'text-gray-600 hover:text-gray-800'}`}                    
           onClick={(e) => {
             e.stopPropagation();
-            onFavoriteToggle(property.id);
+            onFavoriteToggle(listing.id);
           }}
         >
           <Heart 
             className="h-5 w-5" 
-            fill={property.isFavorite ? "currentColor" : "none"}
+            fill={listing.isFavorite ? "currentColor" : "none"}
           />
         </Button>
       </div>
@@ -36,14 +36,14 @@ const PropertyCard = ({ property, onFavoriteToggle, onCardClick }) => (
       <CardContent className="p-4">
         <div className="flex justify-between items-start mb-2">
           <h3 className="font-bold text-lg line-clamp-1 group-hover:text-blue-600 cursor-pointer">
-            {property.title}
+            {listing.title}
           </h3>
           <div className="flex items-center">
-            {property.rating ? (
+            {listing.rating ? (
               <>
                 <Star className="h-4 w-4 text-yellow-500 mr-1" fill="currentColor" />
-                <span>{property.rating}</span>
-                <span className="text-gray-500 text-sm ml-1">({property.reviews})</span>
+                <span>{listing.rating}</span>
+                <span className="text-gray-500 text-sm ml-1">({listing.reviews})</span>
               </>
             ) : (
               <span className="text-gray-400 text-sm italic">尚无评分</span>
@@ -53,34 +53,34 @@ const PropertyCard = ({ property, onFavoriteToggle, onCardClick }) => (
         
         <div className="flex items-center text-gray-500 mb-2">
           <MapPin className="h-4 w-4 mr-1" />
-          <span className="text-sm">{property.address}</span>
+          <span className="text-sm">{listing.address}</span>
         </div>
         
         <div className="flex items-center gap-3 text-sm text-gray-600 mb-3">
           <div className="flex items-center">
             <Bed className="h-4 w-4 mr-1" />
-            <span>{property.bedrooms} {property.bedrooms === 1 ? 'bed' : 'beds'}</span>
+            <span>{listing.bedrooms} {listing.bedrooms === 1 ? 'bed' : 'beds'}</span>
           </div>
           <div className="flex items-center">
             <Bath className="h-4 w-4 mr-1" />
-            <span>{property.bathrooms} {property.bathrooms === 1 ? 'bath' : 'baths'}</span>
+            <span>{listing.bathrooms} {listing.bathrooms === 1 ? 'bath' : 'baths'}</span>
           </div>
           <div className="flex items-center">
             <Home className="h-4 w-4 mr-1" />
-            <span className="capitalize">{property.listingType}</span>
+            <span className="capitalize">{listing.listingType}</span>
           </div>
         </div>
         
         <div className="font-bold text-lg">
-          ${property.price} <span className="text-sm font-normal text-gray-500">/ {property.priceUnit}</span>
+          ${listing.price} <span className="text-sm font-normal text-gray-500">/ {listing.priceUnit}</span>
         </div>
       </CardContent>
     </Card>
   </div>
 );
 
-PropertyCard.propTypes = {
-  property: PropTypes.shape({
+ListingCard.propTypes = {
+  listing: PropTypes.shape({
     id: PropTypes.string.isRequired,
     title: PropTypes.string.isRequired,
     address: PropTypes.string.isRequired,
@@ -98,4 +98,4 @@ PropertyCard.propTypes = {
   onCardClick: PropTypes.func.isRequired
 };
 
-export default PropertyCard;
+export default ListingCard;

@@ -15,6 +15,7 @@ import Login from "@/pages/Login"
 import Register from "@/pages/Register"
 import Trips from "@/pages/trips"
 import TripDetail from "@/pages/TripDetail"
+import LandlordDashboard from "./pages/ LandlordDashboard"
 
 function App() {
   return (
@@ -35,6 +36,7 @@ function App() {
             <Route path="/trips/:tripId" element={<PrivateRoute element={<TripDetail />} />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/landlord" element={<PrivateRoute element={<LandlordDashboard />} />} />
           </Routes>
         </Layout>
       </Router>

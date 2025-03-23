@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { userRegister } from '@/services/userApi';
+import { userRegister } from '@/services/UserApi';
 import { useAuth } from '@/components/common/AuthProvider';
 import { ROLE_TYPE } from '@/components/common/Constants';
 

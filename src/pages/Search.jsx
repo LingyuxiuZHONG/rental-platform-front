@@ -3,12 +3,15 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Search as SearchIcon, Filter, ChevronsUpDown, Loader } from "lucide-react";
-import { searchListings, updateFavorite } from '@/services/listingApi';
+import { searchListings } from '@/services/ListingApi';
+import { updateFavorite } from '@/services/FavoritesApi';
+import { useAuth } from '@/components/common/AuthProvider';
+
 
 // 导入拆分的组件
-import PropertyCard from './search/PropertyCard';
+import PropertyCard from './search/ListingCard';
 import FilterPanel from './search/FilterPanel';
-import propertyExamples from './search/PropertyExamples';
+import { propertyExamples } from '@/components/common/Constants';
 import axios from 'axios';
 
 // 常量定义
@@ -43,6 +46,7 @@ const Search = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
+  const {user} = useAuth();
   
   const [showFilters, setShowFilters] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -215,7 +219,7 @@ const Search = () => {
       ));
       
       // 调用API函数更新后端
-      await updateFavorite(id, newFavoriteStatus);
+      await updateFavorite(user.id, id, newFavoriteStatus);
       
     } catch (error) {
       // 如果请求失败，回滚UI状态

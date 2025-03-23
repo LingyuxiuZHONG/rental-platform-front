@@ -10,10 +10,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { useAuth } from '@/components/common/AuthProvider';
-import { uploadAvatar, updateUserProfile } from '@/services/userApi';
+import { updateUserProfile } from '@/services/UserApi';
+import { uploadAvatar } from '@/services/ResourceApi';
 import { API_BASE_URL } from '@/components/common/constants';
 
-import PasswordChangeForm from './Profile/ PasswordChangeForm';
+import PasswordChangeForm from './profile/ PasswordChangeForm';
 
 
 const Profile = () => {
@@ -72,22 +73,17 @@ const Profile = () => {
   };
 
   const handleImageChange = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    const files = e.target.files;
+
+    if (!files) return;
   
-    // 创建一个本地 URL 来显示预览
-    const newAvatarUrl = URL.createObjectURL(file);
-    setCurrentUser((prevUser) => ({
-      ...prevUser,
-      avatar: newAvatarUrl, // 临时更新头像预览
-    }));
-  
+
     try {
-      const response = await uploadAvatar(user.id, file);
+      const response = await uploadAvatar(user.id, files);
 
       setCurrentUser((prevUser) => ({
         ...prevUser,
-        avatar: data, // 假设后端返回新的头像 URL
+        avatar: `${response[0]}?t=${Date.now()}`,
       }));
       
     } catch (error) {

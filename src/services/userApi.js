@@ -81,20 +81,3 @@ export const updatePassword = async (id, oldPassword, password) => {
 
 
 
-export const uploadAvatar = async (id, file) => {
-  const formData = new FormData();
-  formData.append('avatar', file);
-
-  try {
-    const response = await apiClient.post( `/${id}/avatar`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data.data; // 返回后端返回的数据，比如新的头像 URL
-
-  } catch (error) {
-    console.error('Avatar upload error:', error.response?.data || error.message);
-    throw error.response?.data || error.message;
-  }
-};

@@ -39,25 +39,12 @@ export const searchListings = async (searchParams) => {
   }
 };
 
-export const updateFavorite = async (id, favoriteStatus) => {
-  try {
-    const response = await apiClient.put(`/${id}/favorite`, {
-      isFavorite: favoriteStatus
-    });
-    return response.data.data;
-  } catch (error) {
-    console.error('更新收藏状态失败:', error);
-    throw error;
-  }
-};
 
-
-  
 // 获取单个房源详情
-export const getListingById = async (id) => {
+export const fetchListing = async (id) => {
   try {
-    const response = await apiClient.get(`/listings/${id}`);
-    return response.data;
+    const response = await apiClient.get(`/${id}`);
+    return response.data.data;
   } catch (error) {
     console.error('Error fetching listing:', error);
     throw error;
@@ -77,7 +64,7 @@ export const checkAvailability = async (listingId, dateRange) => {
       params.append('checkOut', dateRange.to.toISOString().split('T')[0]);
     }
     
-    const response = await apiClient.get(`/listings/${listingId}/availability?${params.toString()}`);
+    const response = await apiClient.get(`/${listingId}/availability?${params.toString()}`);
     return response.data;
   } catch (error) {
     console.error('Error checking availability:', error);
@@ -88,7 +75,7 @@ export const checkAvailability = async (listingId, dateRange) => {
 // 获取推荐房源
 export const getRecommendedListings = async (limit = 8) => {
   try {
-    const response = await apiClient.get(`/listings/recommended?limit=${limit}`);
+    const response = await apiClient.get(`/recommended?limit=${limit}`);
     return response.data;
   } catch (error) {
     console.error('Error fetching recommended listings:', error);
@@ -144,10 +131,3 @@ export const getFilteredListings = async (filters) => {
   }
 };
 
-export default {
-  searchListings,
-  getListingById,
-  checkAvailability,
-  getRecommendedListings,
-  getFilteredListings
-};

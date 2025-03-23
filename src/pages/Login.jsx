@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
-import { userLogin } from '@/services/userApi';
+import { userLogin } from '@/services/UserApi';
 import { useAuth } from '@/components/common/AuthProvider';
 import { ROLE_TYPE } from '@/components/common/Constants';
 

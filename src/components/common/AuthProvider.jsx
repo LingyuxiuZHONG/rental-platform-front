@@ -38,7 +38,7 @@ export const AuthProvider = ({ children }) => {
   const setCurrentUser = (userInfo) => {
     setUser(userInfo);
     localStorage.setItem('user', JSON.stringify(userInfo)); 
-    console.log(user);
+
   };
   
   const clearCurrentUser = () => {
