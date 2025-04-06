@@ -4,7 +4,7 @@ import { useAuth } from "@/components/commonComponents/AuthProvider";
 import ChatList from "@/components/messageComponents/ChatList";
 import ChatWindow from "@/components/messageComponents/ChatWindow";
 import { fetchChats } from "@/services/ChatApi";
-import { createMessages, fetchMessages } from "@/services/MessageApi";
+import { createMessages, fetchMessages, updateMessagesStatus } from "@/services/MessageApi";
 import { fetchListingSummary } from "@/services/ListingApi";
 import SockJS from "sockjs-client";
 import { over } from "stompjs";
@@ -63,16 +63,13 @@ const Messages = () => {
 
   // 处理WebSocket订阅
   useEffect(() => {
-    // 只有当连接成功且有当前聊天时才订阅
     if (!stompClient || !connected || !currentChat) return;
     
-    // 取消之前的订阅
     if (subscriptionRef.current) {
       subscriptionRef.current.unsubscribe();
       subscriptionRef.current = null;
     }
     
-    // 创建新的订阅
     console.log(`订阅聊天室: ${currentChat.id}`);
     subscriptionRef.current = stompClient.subscribe(
       `/topic/chat/${currentChat.id}`, 
@@ -81,40 +78,57 @@ const Messages = () => {
           const receivedMessage = JSON.parse(message.body);
           console.log("收到新消息:", receivedMessage);
           
-          // 更新消息列表，避免重复消息
+          // 如果是自己发送的消息，不处理
+          if(receivedMessage.senderId === user.id){
+            return;
+          }
+          
+          // 将新消息添加到列表中
           setMessages(prevMessages => {
-            // 检查是否已存在该消息（通过ID）
             const messageExists = prevMessages.some(msg => 
               msg.id === receivedMessage.id
             );
-            
             if (messageExists) {
-              // 更新已存在的消息
               return prevMessages.map(msg => 
                 (msg.id === receivedMessage.id) ? 
-                  { ...receivedMessage, status: 'delivered' } : msg
+                  { ...receivedMessage } : msg
               );
             } else {
-              // 添加新消息
-              return [...prevMessages, {...receivedMessage, status: 'received'}];
+              return [...prevMessages, { ...receivedMessage, status: 0 }];
             }
           });
+          
+          // 更新聊天列表中的未读消息数量
+          updateChatUnreadCount(currentChat.id, true);
         } catch (error) {
           console.error("解析消息失败:", error);
         }
       }
     );
     
-    // 组件卸载时清理订阅
     return () => {
       if (subscriptionRef.current) {
         subscriptionRef.current.unsubscribe();
         subscriptionRef.current = null;
       }
     };
-  }, [stompClient, connected, currentChat]);
+  }, [stompClient, connected, currentChat, user]);
 
-  // 获取聊天列表
+  // 更新聊天的未读消息数量
+  const updateChatUnreadCount = (chatId, increment = false) => {
+    setChats(prevChats => 
+      prevChats.map(chat => {
+        if (chat.id === chatId) {
+          return {
+            ...chat,
+            unreadCount: increment ? (chat.unreadCount || 0) + 1 : 0
+          };
+        }
+        return chat;
+      })
+    );
+  };
+
   useEffect(() => {
     if (!user) return;
 
@@ -123,7 +137,6 @@ const Messages = () => {
         const response = await fetchChats(user.id, user.roleType);
         setChats(response);
 
-        // 处理 URL 参数中的 chatId
         const selectedChat = chatId
           ? response.find((chat) => chat.id === Number(chatId))
           : response[0];
@@ -140,7 +153,6 @@ const Messages = () => {
     loadChats();
   }, [user, chatId, navigate]);
 
-  // 获取聊天消息 & 房源信息 (移除了WebSocket相关代码，已在上面单独处理)
   useEffect(() => {
     if (!currentChat) return;
 
@@ -151,6 +163,9 @@ const Messages = () => {
 
         const listing = await fetchListingSummary(currentChat.listingId);
         setListing(listing);
+        
+        // 将当前聊天的所有未读消息标记为已读
+        markMessagesAsRead(currentChat.id);
       } catch (error) {
         console.error("获取聊天消息或房源信息失败:", error);
       }
@@ -159,7 +174,45 @@ const Messages = () => {
     loadMessagesAndListing();
   }, [currentChat]);
 
-  // 选择聊天
+  // 将消息标记为已读
+  const markMessagesAsRead = async (chatId) => {
+    // 找到当前聊天中所有未读且非当前用户发送的消息
+    const unreadMessages = messages.filter(
+      msg => msg.status === 0 && msg.senderId !== user.id
+    );
+    
+    if (unreadMessages.length === 0) return;
+    
+    try {
+      // 更新本地消息状态
+      setMessages(prevMessages => 
+        prevMessages.map(msg => 
+          (msg.status === 0 && msg.senderId !== user.id) ? 
+            { ...msg, status: 1 } : msg
+        )
+      );
+      
+      // 重置未读消息计数
+      updateChatUnreadCount(chatId, false);
+      
+      // 调用API更新服务器上的消息状态
+      const messageIds = unreadMessages.map(msg => msg.id);
+      await updateMessagesStatus(messageIds, 1);
+      
+      // 通知其他客户端消息已读
+      if (stompClient && connected) {
+        messageIds.forEach(id => {
+          stompClient.send("/app/chat/status", {}, JSON.stringify({
+            messageId: id,
+            status: 1
+          }));
+        });
+      }
+    } catch (error) {
+      console.error("更新消息状态失败:", error);
+    }
+  };
+
   const handleSelectChat = (chat) => {
     setCurrentChat(chat);
     navigate(`/messages?chatId=${chat.id}`, { replace: true });
@@ -173,38 +226,29 @@ const Messages = () => {
       senderId: user.id,
       content: content,
       messageType: 1,
+      status: 0, // 初始状态为未读
       createdAt: new Date().toISOString()
     };
   
-    // 乐观更新 UI - 添加状态标记
-    const tempMessage = { 
-      ...newMessage, 
-      status: 'sending' 
-    };
-    
-    setMessages(prevMessages => [...prevMessages, tempMessage]);
+    setMessages(prevMessages => [...prevMessages, newMessage]);
   
     try {
-      // 通过 WebSocket 发送消息
       stompClient.send("/app/chat/send", {}, JSON.stringify(newMessage));
       
-      // 设置超时检查，确保消息被确认
-      setTimeout(() => {
-        setMessages(prevMessages => 
-          prevMessages.map(msg => 
-            msg.status === 'sending' 
-              ? { ...msg, status: 'failed' } 
-              : msg
-          )
-        );
-      }, 5000); // 5秒超时
-    } catch (error) {
-      // 处理发送失败情况
-      setMessages(prevMessages => 
-        prevMessages.map(msg => 
-          msg.status === 'sending' ? { ...msg, status: 'failed' } : msg
-        )
+      // 更新当前聊天的最后消息
+      setChats(prevChats => 
+        prevChats.map(chat => {
+          if (chat.id === currentChat.id) {
+            return {
+              ...chat,
+              lastMessage: content,
+              lastMessageTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            };
+          }
+          return chat;
+        })
       );
+    } catch (error) {
       console.error("发送消息失败:", error);
     }
   };
@@ -213,10 +257,7 @@ const Messages = () => {
     <div className="container mx-auto py-6 max-w-6xl">
       <h1 className="text-3xl font-bold mb-6">消息</h1>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-[70vh]">
-        {/* 聊天列表组件 */}
         <ChatList chats={chats} currentChatId={currentChat?.id} onSelectChat={handleSelectChat} />
-
-        {/* 聊天窗口组件 */}
         <ChatWindow
           currentChat={currentChat}
           messages={messages}

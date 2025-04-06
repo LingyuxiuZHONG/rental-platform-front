@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Send, Phone, Video, MoreHorizontal, Image as ImageIcon, ExternalLink, Paperclip, Smile } from "lucide-react";
+import { Send, Phone, Video, MoreHorizontal, Image as ImageIcon, ExternalLink, Paperclip, Smile, Check, CheckCheck } from "lucide-react";
 import { API_BASE_URL } from '../commonComponents/Constants';
 
 const ChatWindow = ({ currentChat, messages, currentUser, onSendMessage, listing }) => {
@@ -46,6 +46,17 @@ const ChatWindow = ({ currentChat, messages, currentUser, onSendMessage, listing
   // 格式化价格显示
   const formatPrice = (price) => {
     return price.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  };
+  
+  // 获取消息状态图标
+  const getMessageStatusIcon = (message) => {
+    if (message.senderId !== currentUser.id) return null;
+    
+    return message.status === 1 ? (
+      <CheckCheck className="h-3 w-3 text-blue-300 ml-1" />
+    ) : (
+      <Check className="h-3 w-3 text-blue-300 ml-1" />
+    );
   };
   
   return (
@@ -131,9 +142,10 @@ const ChatWindow = ({ currentChat, messages, currentUser, onSendMessage, listing
                   }`}
                 >
                   <p className="text-sm">{message.content}</p>
-                  <p className={`text-xs mt-1 ${message.senderId === currentUser.id ? 'text-blue-100' : 'text-gray-400'}`}>
+                  <div className={`text-xs mt-1 ${message.senderId === currentUser.id ? 'text-blue-100' : 'text-gray-400'} flex items-center`}>
                     {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </p>
+                    {getMessageStatusIcon(message)}
+                  </div>
                 </div>
                 {message.senderId === currentUser.id && (
                   <Avatar className="h-8 w-8 ml-2 mt-1 flex-shrink-0">

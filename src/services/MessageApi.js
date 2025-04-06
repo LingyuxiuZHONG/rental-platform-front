@@ -3,6 +3,10 @@ import axios from 'axios';
 
 const API_BASE_URL = '/api/messages';
 
+
+// Authorization: `Bearer ${localStorage.getItem("token")}`,
+
+
 // 创建axios实例
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -32,3 +36,14 @@ export const createMessages = async (params) => {
     throw error;
   }
 };
+
+export const updateMessagesStatus = async (params) => {
+  try {
+    const response = await apiClient.put('',params);
+
+  } catch (error) {
+    console.error('标记消息已读失败:', error);
+    throw error;
+  }
+};
+

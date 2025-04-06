@@ -48,7 +48,9 @@ const ChatList = ({ chats, currentChatId, onSelectChat }) => {
                     <h3 className={`font-medium truncate ${isActive ? 'text-blue-700' : 'text-gray-800'}`}>
                       {`${otherUser.firstName}${otherUser.lastName}`}
                     </h3>
-                    <span className="text-xs text-gray-500">{chat.lastMessageTime}</span>
+                    <span className="text-xs text-gray-500">
+                      {new Date(chat.lastMessageTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
                   </div>
                   <p className={`text-sm truncate mt-1 ${
                     chat.unreadCount > 0 ? 'font-medium text-gray-800' : 'text-gray-500'
