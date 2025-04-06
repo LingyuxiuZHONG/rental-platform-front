@@ -39,3 +39,33 @@ export const uploadAvatar = async (id, files) => {
       throw error.response?.data || error.message;
     }
   };
+
+
+
+  export const uploadListingImages = async (id, files) => {
+
+    const formData = new FormData();
+
+    // 将文件添加到 FormData 中
+    for (let i = 0; i < files.length; i++) {
+      console.log(`Appending file:`, files[i]); // 确保 files[i] 是 File 类型
+      formData.append('files', files[i].file);  
+    }
+
+    formData.append('type', 'listing'); 
+    formData.append('id', id);      
+    
+    try {
+      const response = await apiClient.post( "", formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      return response.data.data; // 返回后端返回的数据，比如新的头像 URL
+  
+    } catch (error) {
+      console.error('Listing images upload error:', error.response?.data || error.message);
+      throw error.response?.data || error.message;
+    }
+  };

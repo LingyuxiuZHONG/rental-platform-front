@@ -19,11 +19,7 @@ const SearchBar = ({ onSearch }) => {
     from: searchParams.get('from') ? new Date(searchParams.get('from')) : null, 
     to: searchParams.get('to') ? new Date(searchParams.get('to')) : null 
   });
-  const [guests, setGuests] = useState({ 
-    adults: parseInt(searchParams.get('adults') || '1'), 
-    children: parseInt(searchParams.get('children') || '0'), 
-    infants: parseInt(searchParams.get('infants') || '0') 
-  });
+  const [guests, setGuests] = useState(searchParams.get('guests') || 1);
   
   useEffect(() => {
     const handleClickOutside = (event) => {

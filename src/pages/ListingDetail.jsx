@@ -8,10 +8,14 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Heart, Share, MapPin, Star, Users, Home, Wifi, Car, Utensils, Calendar as CalendarIcon } from 'lucide-react';
 import { fetchListingReviews } from '@/services/ReviewsApi';
-import { fetchListing } from '@/services/ListingApi';
-import { API_BASE_URL } from '@/components/common/Constants';
+import { fetchListingDetail } from '@/services/ListingApi';
+import { API_BASE_URL } from '@/components/commonComponents/Constants';
 import FormattedDate from '@/components/utils/formattedDate';
 import StarRating from '@/components/utils/StarRating';
+import AmapDisplayer from '../components/searchComponents/AMapDisplayer';
+import { useAuth } from '@/components/commonComponents/AuthProvider';
+import { createBooking } from '@/services/BookingApi';
+import { createChat } from '@/services/ChatApi';
 
 
 const ListingDetail = () => {
@@ -25,10 +29,13 @@ const ListingDetail = () => {
     from: undefined,
     to: undefined
   });
-  const [totalPrice, setTotalPrice] = useState(0);
+  const [totalAmount, setTotalPrice] = useState(0);
   const [nights, setNights] = useState(0);
   const [isAvailable, setIsAvailable] = useState(true);
   const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
+  const { user } = useAuth();
+  const [guestCount, setGuestCount] = useState(1);
+  const [bookingError, setBookingError] = useState(null);
 
   // 从后端获取房源详情数据
   useEffect(() => {
@@ -36,9 +43,8 @@ const ListingDetail = () => {
       try {
         setLoading(true);
         // 使用API服务获取房源数据
-        const listingData = await fetchListing(id);
+        const listingData = await fetchListingDetail(id);
         setListing(listingData);
-
 
         // 使用API服务获取评价数据
         const reviewsData = await fetchListingReviews(id);
@@ -66,45 +72,112 @@ const ListingDetail = () => {
       setNights(nightCount);
       
       // 计算总价
-      setTotalPrice(listing.price * nightCount + listing.cleaningFee + listing.serviceFee);
+      setTotalPrice(listing.price * nightCount);
       
       // 检查所选日期是否可用
-      const checkDateAvailability = async () => {
-        try {
-          setIsCheckingAvailability(true);
-          const availabilityData = await checkAvailability(
-            id, 
-            selectedDates.from, 
-            selectedDates.to
-          );
-          setIsAvailable(availabilityData.available);
-        } catch (err) {
-          console.error('Error checking availability:', err);
-          // 默认为可用，避免阻止用户继续操作
-          setIsAvailable(true);
-        } finally {
-          setIsCheckingAvailability(false);
-        }
-      };
+      // const checkDateAvailability = async () => {
+      //   try {
+      //     setIsCheckingAvailability(true);
+      //     const availabilityData = await checkAvailability(
+      //       id, 
+      //       selectedDates.from, 
+      //       selectedDates.to
+      //     );
+      //     setIsAvailable(availabilityData.available);
+      //   } catch (err) {
+      //     console.error('Error checking availability:', err);
+      //     // 默认为可用，避免阻止用户继续操作
+      //     setIsAvailable(true);
+      //   } finally {
+      //     setIsCheckingAvailability(false);
+      //   }
+      // };
       
-      checkDateAvailability();
+      // checkDateAvailability();
     }
   }, [id, listing, selectedDates]);
 
   const handleDateSelect = (range) => {
     setSelectedDates(range);
+    // 清除之前可能存在的错误信息
+    setBookingError(null);
   };
 
-  const handleBooking = () => {
+  const handleBooking = async () => {
     if (selectedDates.from && selectedDates.to && listing) {
+      // 清除之前可能存在的错误信息
+      setBookingError(null);
+      
+      console.log(listing);
+      const listingId = listing.id;
+      const bookingUserId = user.id;
+      const hostId = listing.host.id;
+      const startDate = selectedDates.from;
+      const endDate = selectedDates.to;
+
+      const response = await createBooking({
+        listingId,
+        bookingUserId,
+        hostId,
+        startDate,
+        endDate,
+        guestCount,
+        totalAmount
+      });
+
+      if(response.code != 200){
+        console.log(response.message);
+        setBookingError(response.message);
+        return;
+      }
+
+      const bookingId = response.data;
+
       navigate(`/booking/${id}`, {
         state: {
           listing,
           dates: selectedDates,
           nights,
-          totalPrice
+          totalAmount,
+          bookingId,
+          guestCount
         }
       });
+    }
+  };
+
+  const decrementGuests = () => {
+    if (guestCount > 1) {
+      setGuestCount(guestCount - 1);
+    }
+  };
+  
+  const incrementGuests = () => {
+    setGuestCount(guestCount + 1);
+    // 清除之前可能存在的错误信息
+    setBookingError(null);
+  };
+
+  
+
+  const handleContactHost = async () => {
+    try {
+      const chatId = await createChat({
+        listingId: listing.id,
+        hostId: listing.host.id,
+        guestId: user.id
+      })
+
+
+      navigate(`/messages?chatId=${chatId}`, {
+        state: { 
+          otherUser: listing.host,
+          listing: listing 
+        }
+      });
+      
+    } catch (error) {
+      console.error("创建聊天失败:", error);
     }
   };
 
@@ -145,10 +218,10 @@ const ListingDetail = () => {
           <span>{listing.address}</span>
         </div>
         <div className="ml-auto flex gap-2">
-          <Button variant="outline" size="sm">
+          {/* <Button variant="outline" size="sm">
             <Share className="w-4 h-4 mr-2" />
             分享
-          </Button>
+          </Button> */}
           <Button variant="outline" size="sm">
             <Heart className="w-4 h-4 mr-2" />
             收藏
@@ -160,7 +233,7 @@ const ListingDetail = () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-8">
         <div className="md:col-span-2 md:row-span-2">
           <img 
-            src={listing.images && listing.images[0] ? listing.images[0] : '默认图片URL'} 
+            src={`${API_BASE_URL}${listing.images && listing.images[0] ? listing.images[0] : '默认图片URL'}`} 
             alt="主图" 
             className="w-full h-full object-cover rounded-tl-lg rounded-bl-lg"
           />
@@ -170,7 +243,7 @@ const ListingDetail = () => {
           listing.images.slice(1, 5).map((image, index) => (
             <div key={index}>
               <img
-                src={image}
+                src={`${API_BASE_URL}${image}`}
                 alt={`图片${index + 2}`}
                 className={`w-full h-full object-cover ${index === 1 ? 'rounded-tr-lg' : ''} ${index === 3 ? 'rounded-br-lg' : ''}`}
               />
@@ -189,14 +262,14 @@ const ListingDetail = () => {
             <div className="flex justify-between items-start">
               <div>
                 <h2 className="text-xl font-semibold mb-2">
-                  由 {listing.host.lastName}{listing.host.firstName} 出租的整套公寓
+                  由 {listing.host.lastName}{listing.host.firstName} 出租
                 </h2>
                 <p className="text-muted-foreground">
                   {listing.maxGuests} 位客人 · {listing.bedrooms} 间卧室 · {listing.bathrooms} 间卫生间
                 </p>
               </div>
               <Avatar>
-                <AvatarImage src={`${API_BASE_URL}${listing.host.avatar}`}  />
+                <AvatarImage src={`${API_BASE_URL}${listing.host.avatar}`} className="object-cover"/>
                 <AvatarFallback>{listing.host.firstName?.[0]}{listing.host.lastName?.[0]}</AvatarFallback>
               </Avatar>
                
@@ -207,6 +280,35 @@ const ListingDetail = () => {
           <div className="border-b pb-6 mb-6">
             <h2 className="text-xl font-semibold mb-4">房源描述</h2>
             <p>{listing.description}</p>
+          </div>
+
+          {/* 房东信息 */}
+          <div className="border-b pb-6 mb-6">
+            <h2 className="text-xl font-semibold mb-4">关于房东</h2>
+            <div className="flex items-start">
+              <Avatar className="w-16 h-16 mr-4">
+                <AvatarImage src={`${API_BASE_URL}${listing.host.avatar}`} />
+                <AvatarFallback>{listing.host.firstName?.[0]}{listing.host.lastName?.[0]}</AvatarFallback>
+              </Avatar>
+              <div>
+                <h3 className="text-lg font-medium">{listing.host.lastName}{listing.host.firstName}</h3>
+                <p className="text-muted-foreground text-sm mb-2">注册时间：<FormattedDate date={listing.host.createdAt} /></p>
+                <p className="mb-2">{listing.host.description || "这位房东还没有添加自我介绍"}</p>
+                <div className="flex gap-4 text-sm text-muted-foreground">
+                  <div className="flex items-center">
+                    <Users className="w-4 h-4 mr-1" />
+                    <span>已接待 {listing.host.guestCount || 0} 位房客</span>
+                  </div>
+                  <div className="flex items-center">
+                    <Home className="w-4 h-4 mr-1" />
+                    <span>{listing.host.listingCount || 1} 处房源</span>
+                  </div>
+                </div>
+                <Button variant="outline" size="sm" className="mt-4" onClick={handleContactHost}>
+                  联系房东
+                </Button>
+              </div>
+            </div>
           </div>
           
           {/* 设施 */}
@@ -225,8 +327,53 @@ const ListingDetail = () => {
             </div>
           </div>
           
-          {/* 评价 */}
-          <div>
+          {/* 地图位置 - 修改了这部分，添加了更清晰的边界和间距 */}
+          <div className="border-b pb-6 mb-6">
+            <h2 className="text-xl font-semibold mb-4">房源位置</h2>
+            <div className="mb-4">
+              <div className="flex items-center mb-2">
+                <MapPin className="w-5 h-5 mr-2 text-primary" />
+                <span>{listing.address}</span>
+              </div>
+            </div>
+            
+            {/* 地图组件 - 增加了边框和底部外边距 */}
+            {listing.latitude && listing.longitude ? (
+              <div className="border rounded-lg overflow-hidden mb-8">
+                <AmapDisplayer 
+                  address={listing.address}
+                  latitude={listing.latitude}
+                  longitude={listing.longitude}
+                  zoom={15}
+                />
+              </div>
+            ) : (
+              <div className="bg-muted w-full h-60 rounded-lg flex items-center justify-center mb-8 border">
+                <p className="text-muted-foreground">地图信息暂不可用</p>
+              </div>
+            )}
+            
+            {/* 周边设施 */}
+            {listing.nearbyFacilities && listing.nearbyFacilities.length > 0 && (
+              <div className="mt-4 mb-6">
+                <h3 className="font-medium mb-2">周边设施</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  {listing.nearbyFacilities.map((facility, index) => (
+                    <div key={index} className="flex items-start">
+                      <div className="w-5 h-5 mt-0.5 mr-2 flex items-center justify-center">
+                        <div className="w-2 h-2 rounded-full bg-primary"></div>
+                      </div>
+                      <p>{facility}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          
+          {/* 评价区域 - 添加了清晰的边界和独立的容器 */}
+          <div className="border-b pb-6 mb-6">
+            <h2 className="text-xl font-semibold mb-4">评价</h2>
             <div className="flex items-center mb-4">
               {listing.rating ? (
                 <>
@@ -270,19 +417,21 @@ const ListingDetail = () => {
                 <p>暂无评论</p>
               )}
               
-              <Button 
-                variant="outline" 
-                className="mt-4"
-                onClick={() => navigate(`/listings/${id}/reviews`)}
-              >
-                查看全部 {reviews.length} 条评价
-              </Button>
+              <div className="pt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => navigate(`/listings/${id}/reviews`)}
+                >
+                  查看全部 {reviews.length} 条评价
+                </Button>
+              </div>
             </div>
           </div>
         </div>
         
+        
         {/* 预订卡片 */}
-        <div>
+        <div className="lg:col-span-1">
           <Card className="sticky top-4">
             <CardContent className="p-6">
               <div className="flex justify-between items-center mb-6">
@@ -298,52 +447,56 @@ const ListingDetail = () => {
                   ) : (
                     <span className="text-gray-400 text-sm italic">尚无评分</span>
                   )}
-                  
                 </div>
               </div>
               
-              <div className="border rounded-lg overflow-hidden mb-4">
-                <Tabs defaultValue="dates">
-                  <TabsList className="grid grid-cols-2 w-full border-b">
-                    <TabsTrigger value="dates">日期</TabsTrigger>
-                    <TabsTrigger value="guests">房客</TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="dates" className="p-4">
-                    <div className="text-center mb-2">选择入住和退房日期</div>
-                    <Calendar
-                      mode="range"
-                      selected={selectedDates}
-                      onSelect={handleDateSelect}
-                      className="border-0"
-                    />
-                  </TabsContent>
-                  <TabsContent value="guests" className="p-4">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="font-medium">成人</p>
-                        <p className="text-sm text-muted-foreground">13岁及以上</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button variant="outline" size="icon" className="h-8 w-8 rounded-full">-</Button>
-                        <span>2</span>
-                        <Button variant="outline" size="icon" className="h-8 w-8 rounded-full">+</Button>
-                      </div>
+              <div className="border rounded-lg overflow-hidden mb-6">
+                <div className="p-4 border-b">
+                  <div className="text-center mb-2 font-medium">选择入住和退房日期</div>
+                  <Calendar
+                    mode="range"
+                    selected={selectedDates}
+                    onSelect={handleDateSelect}
+                    className="border-0"
+                  />
+                </div>
+                
+                <div className="p-4">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-medium">房客数量</p>
                     </div>
-                    <div className="flex justify-between items-center mt-4">
-                      <div>
-                        <p className="font-medium">儿童</p>
-                        <p className="text-sm text-muted-foreground">2-12岁</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button variant="outline" size="icon" className="h-8 w-8 rounded-full">-</Button>
-                        <span>0</span>
-                        <Button variant="outline" size="icon" className="h-8 w-8 rounded-full">+</Button>
-                      </div>
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="icon" 
+                        className="h-8 w-8 rounded-full"
+                        onClick={decrementGuests}
+                        disabled={guestCount <= 1}
+                      >
+                        -
+                      </Button>
+                      <span>{guestCount}</span>
+                      <Button 
+                        variant="outline" 
+                        size="icon" 
+                        className="h-8 w-8 rounded-full"
+                        onClick={incrementGuests}
+                      >
+                        +
+                      </Button>
                     </div>
-                  </TabsContent>
-                </Tabs>
+                  </div>
+                </div>
               </div>
-              
+
+              {/* 显示预订错误信息 */}
+              {bookingError && (
+                <div className="text-red-500 text-sm mb-4 p-2 bg-red-50 border border-red-200 rounded-md">
+                  {bookingError}
+                </div>
+              )}
+
               {isCheckingAvailability ? (
                 <Button className="w-full mb-4" disabled>
                   正在检查可用性...
@@ -357,7 +510,7 @@ const ListingDetail = () => {
                   )}
                   <Button 
                     className="w-full mb-4"
-                    disabled={!selectedDates.from || !selectedDates.to || !isAvailable}
+                    disabled={!selectedDates.from || !selectedDates.to || !isAvailable || guestCount < 1}
                     onClick={handleBooking}
                   >
                     预订
@@ -365,26 +518,17 @@ const ListingDetail = () => {
                 </>
               )}
               
+              {/* 价格明细 */}
               {selectedDates.from && selectedDates.to && (
-                <div className="space-y-4">
-                  <p className="text-center text-sm text-muted-foreground">预订前无需付款</p>
-                  
+                <div className="space-y-4">                  
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span>¥{listing.price} x {nights}晚</span>
                       <span>¥{listing.price * nights}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span>清洁费</span>
-                      <span>¥{listing.cleaningFee}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>服务费</span>
-                      <span>¥{listing.serviceFee}</span>
-                    </div>
                     <div className="flex justify-between font-bold pt-2 border-t">
                       <span>总价</span>
-                      <span>¥{totalPrice}</span>
+                      <span>¥{totalAmount}</span>
                     </div>
                   </div>
                 </div>

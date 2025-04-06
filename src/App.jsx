@@ -1,21 +1,22 @@
 import { Toaster } from "sonner"
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom"
-import { AuthProvider } from "./components/common/AuthProvider"
-import { PrivateRoute } from "./components/common/PrivateRoute"
+import { AuthProvider } from "./components/commonComponents/AuthProvider"
+import { PrivateRoute } from "./components/commonComponents/PrivateRoute"
 
-import Layout from "@/components/Layout/Layout"
+import Layout from "@/components/layoutComponents/Layout"
 import Home from "@/pages/Home"
 import ListingDetail from "@/pages/ListingDetail"
 import Search from "@/pages/Search"
-import Booking from "@/pages/Booking"
+import Booking from "@/pages/ConfirmBooking"
 import Profile from "@/pages/Profile"
 import Favorites from "@/pages/Favorites"
 import Messages from "@/pages/Messages"
 import Login from "@/pages/Login"
 import Register from "@/pages/Register"
 import Trips from "@/pages/trips"
-import TripDetail from "@/pages/TripDetail"
-import LandlordDashboard from "./pages/ LandlordDashboard"
+import HostDashboard from "./pages/HostDashboard"
+import BookingDetailPage from "./pages/BookingDetailPage"
+
 
 function App() {
   return (
@@ -33,10 +34,11 @@ function App() {
             <Route path="/favorites" element={<PrivateRoute element={<Favorites />} />} />
             <Route path="/messages" element={<PrivateRoute element={<Messages />} />} />
             <Route path="/trips" element={<PrivateRoute element={<Trips />} />} />
-            <Route path="/trips/:tripId" element={<PrivateRoute element={<TripDetail />} />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route path="/landlord" element={<PrivateRoute element={<LandlordDashboard />} />} />
+            <Route path="/host" element={<PrivateRoute element={<HostDashboard />} />} />
+            <Route path="/bookings/:bookingId"  element={<PrivateRoute element={<BookingDetailPage />} />} />
+
           </Routes>
         </Layout>
       </Router>

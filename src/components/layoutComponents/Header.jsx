@@ -3,10 +3,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Home, Menu, UserCircle, Heart, Calendar as CalendarIcon, MessageSquare, LogOut, Moon, Sun } from "lucide-react";
+import { Home, House, Menu, UserCircle, Heart, Calendar as CalendarIcon, MessageSquare, LogOut, Moon, Sun } from "lucide-react";
 import SearchBar from "./search/SearchBar";
-import { useAuth } from '../common/AuthProvider';
-import { API_BASE_URL } from '../common/constants';
+import { useAuth } from '../commonComponents/AuthProvider';
+import { API_BASE_URL } from '../commonComponents/constants';
 
 
 
@@ -19,7 +19,7 @@ const Header = ({ theme, toggleTheme}) => {
   
   const handleLogout = () => {
     clearCurrentUser();
-    navigate('/');
+    navigate('/search');
   }
 
 
@@ -29,9 +29,7 @@ const Header = ({ theme, toggleTheme}) => {
       address: searchParams.address || "",
       from: searchParams.dateRange?.from ? searchParams.dateRange.from.toISOString().split('T')[0] : "",
       to: searchParams.dateRange?.to ? searchParams.dateRange.to.toISOString().split('T')[0] : "",
-      adults: searchParams.guests?.adults ?? 1,
-      children: searchParams.guests?.children ?? 0,
-      infants: searchParams.guests?.infants ?? 0
+      guests: searchParams?.guests ? searchParams.guests : 1,
     }).toString();
     if(location.pathname === '/search'){
       window.location.href = `/search?${queryString}`;
@@ -42,7 +40,7 @@ const Header = ({ theme, toggleTheme}) => {
 
   const handleClick = (e) => {
     e.preventDefault(); // 阻止默认的 Link 行为
-    window.location.href = '/'; // 完全刷新页面
+    window.location.href = '/search'; // 完全刷新页面
   };
 
   const handleMenuItemClick = () => {
@@ -56,7 +54,7 @@ const Header = ({ theme, toggleTheme}) => {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <a
-            href="/" 
+            href="/search" 
             className="text-xl font-medium text-primary flex items-center"
             onClick={handleClick}
           >
@@ -85,7 +83,7 @@ const Header = ({ theme, toggleTheme}) => {
                   <button className="rounded-full flex items-center gap-2 border px-3 py-2">
                     <Menu className="h-4 w-4" />
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={`${API_BASE_URL}${user.avatar}`}/>
+                      <AvatarImage src={`${API_BASE_URL}${user.avatar}`} />
                       <AvatarFallback>{user.firstName?.[0]}{user.lastName?.[0]}</AvatarFallback>
                     </Avatar>
                   </button>
@@ -100,24 +98,38 @@ const Header = ({ theme, toggleTheme}) => {
                         <span>个人信息</span>
                       </Link>
                     </Button>
-                    <Button variant="ghost" className="w-full justify-start" onClick={handleMenuItemClick}>
+                    {user.roleType === 1 && (
+                      <Button variant="ghost" className="w-full justify-start" onClick={handleMenuItemClick}>
                       <Link to="/favorites" className="flex items-center w-full">
                         <Heart className="mr-2 h-4 w-4" />
                         <span>我的收藏</span>
                       </Link>
                     </Button>
+                    )}
+                    {user.roleType === 1 && (
                     <Button variant="ghost" className="w-full justify-start" onClick={handleMenuItemClick}>
                       <Link to="/trips" className="flex items-center w-full">
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         <span>我的行程</span>
                       </Link>
                     </Button>
-                    <Button variant="ghost" className="w-full justify-start" >
+                    )}
+                    {user.roleType === 2 && (
+                      <Button variant="ghost" className="w-full justify-start">
+                        <Link to="/host" className="flex items-center w-full">
+                          <Home className="mr-2 h-4 w-4" />
+                          <span>房东后台</span>
+                        </Link>
+                      </Button>
+                    )}
+                    <Button variant="ghost" className="w-full justify-start">
                       <Link to="/messages" className="flex items-center w-full">
                         <MessageSquare className="mr-2 h-4 w-4" />
                         <span>消息</span>
                       </Link>
                     </Button>
+
+                    
                   </DropdownMenuGroup>
                   <DropdownMenuSeparator />
                   <Button variant="ghost" className="w-full justify-start text-red-500" onClick={handleLogout}>
@@ -138,6 +150,7 @@ const Header = ({ theme, toggleTheme}) => {
                 </Button>
               </div>
             )}
+
           </div>
         </div>
       </div>

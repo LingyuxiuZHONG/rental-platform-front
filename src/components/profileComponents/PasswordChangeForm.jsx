@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { AlertCircle, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { verifyPassword, updatePassword } from '@/services/UserApi'; // 确保导入正确的API函数
-import { useAuth } from '@/components/common/AuthProvider'; // 导入Auth上下文
+import { useAuth } from '@/components/commonComponents/AuthProvider'; // 导入Auth上下文
 
 const PasswordChangeForm = ({ onPasswordChangeSuccess }) => {
   const { user } = useAuth(); // 从Auth上下文获取用户信息

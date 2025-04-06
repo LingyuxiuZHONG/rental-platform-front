@@ -7,10 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
-import { userLogin } from '@/services/UserApi';
-import { useAuth } from '@/components/common/AuthProvider';
-import { ROLE_TYPE } from '@/components/common/Constants';
-
+import { passwordReset, userLogin } from '@/services/UserApi';
+import { useAuth } from '@/components/commonComponents/AuthProvider';
+import { ROLE_TYPE } from '@/components/commonComponents/Constants';
+import PasswordReset from '../components/passwordComponents/PasswordReset';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -21,6 +21,25 @@ const Login = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [resetError, setResetError] = useState(''); // 这里新增一个状态来管理密码重置的错误信息
+
+  const [isResetModalVisible, setIsResetModalVisible] = useState(false);
+
+  const handleForgotPassword = () => {
+    setIsResetModalVisible(true);
+  };
+
+  const handlePasswordReset = async (resetData) => {
+    try {
+      // 执行密码重置API调用
+      await passwordReset(resetData);
+
+
+    } catch (error) {
+      console.error('重置密码出错:', error);
+      setResetError('密码重置失败，请稍后再试。'); // 设置错误信息
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -33,6 +52,7 @@ const Login = () => {
   const { setCurrentUser } = useAuth();
 
   const handleLogin = async (e) => {
+    console.log("handleLogin");
     e.preventDefault();
     
     // 验证
@@ -85,6 +105,13 @@ const Login = () => {
             </Alert>
           )}
           
+          {resetError && (  // 显示密码重置错误信息
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{resetError}</AlertDescription>
+            </Alert>
+          )}
+
           <form onSubmit={handleLogin}>
             <div className="space-y-4">
               <div className="space-y-2">
@@ -103,10 +130,15 @@ const Login = () => {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password">密码</Label>
-                  <Link to="/forgot-password" className="text-sm text-blue-600 hover:underline">
+                  <Link 
+                    onClick={handleForgotPassword} 
+                    to="#" 
+                    className="text-sm text-blue-600 hover:underline"
+                  >
                     忘记密码?
                   </Link>
                 </div>
+
                 <Input 
                   id="password"
                   name="password"
@@ -115,6 +147,11 @@ const Login = () => {
                   value={formData.password}
                   onChange={handleChange}
                   required
+                />
+                <PasswordReset
+                  isVisible={isResetModalVisible}
+                  onClose={() => setIsResetModalVisible(false)}
+                  onReset={handlePasswordReset}
                 />
               </div>
               

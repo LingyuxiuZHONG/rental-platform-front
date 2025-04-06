@@ -10,8 +10,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { userRegister } from '@/services/UserApi';
-import { useAuth } from '@/components/common/AuthProvider';
-import { ROLE_TYPE } from '@/components/common/Constants';
+import { useAuth } from '@/components/commonComponents/AuthProvider';
+import { ROLE_TYPE } from '@/components/commonComponents/Constants';
 
 
 const Register = () => {

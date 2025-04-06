@@ -5,8 +5,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Star, MapPin, Calendar, Trash2, Heart } from 'lucide-react';
 import { fetchFavorites, removeFavorite } from '@/services/FavoritesApi';
-import { useAuth } from '@/components/common/AuthProvider';
+import { useAuth } from '@/components/commonComponents/AuthProvider';
 import FormattedDate from '@/components/utils/formattedDate';
+import { API_BASE_URL } from '@/components/commonComponents/Constants';
 
 const Favorites = () => {
   const [favorites, setFavorites] = useState([]);
@@ -36,16 +37,13 @@ const Favorites = () => {
 
   const handleRemoveFavorite = async (favoriteId) => {
     try {
-
       await removeFavorite(user.id, favoriteId);
       setFavorites(favorites.filter(item => item.favoriteId !== favoriteId));
       
     } catch (err) {
-      
+      // 错误处理可以在这里添加
     }
   };
-
-  
 
   if (loading) {
     return (
@@ -97,15 +95,11 @@ const Favorites = () => {
 };
 
 const FavoriteCard = ({ item, onRemove }) => {
-
-
-
-  
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden flex flex-col h-full">
       <div className="relative">
         <img
-          src={item.images && item.images.length > 0 ? item.images[0] : '/placeholder.jpg'}
+          src={`${API_BASE_URL}${item.images}`}
           alt={item.title}
           className="w-full h-48 object-cover"
         />
@@ -123,19 +117,25 @@ const FavoriteCard = ({ item, onRemove }) => {
           </Badge>
         </div>
       </div>
-      <CardContent className="pt-4">
+      <CardContent className="pt-3 pb-2 flex-grow">
+        {/* 调整了内容顺序，将标题移到了最上面 */}
+        <h3 className="font-bold text-lg mb-2">{item.title}</h3>
+        
+        <div className="flex items-center text-gray-500 mb-2">
+          <MapPin className="h-4 w-4 mr-1" />
+          <span>{item.address}</span>
+        </div>
+        
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center">
             {item.rating ? (
               <>
                 <Star className="h-4 w-4 text-yellow-500 mr-1" fill="currentColor" />
                 <span>{item.rating}</span>
-                <span className="text-gray-500 text-sm ml-1">({item.reviews})</span>
               </>
             ) : (
               <span className="text-gray-400 text-sm italic">尚无评分</span>
             )}
-
           </div>
           {item.category === "experiences" && (
             <Badge variant="outline">
@@ -144,12 +144,8 @@ const FavoriteCard = ({ item, onRemove }) => {
             </Badge>
           )}
         </div>
-        <h3 className="font-bold text-lg mb-1">{item.title}</h3>
-        <div className="flex items-center text-gray-500 mb-3">
-          <MapPin className="h-4 w-4 mr-1" />
-          <span>{item.address}</span>
-        </div>
-        <p className="font-bold">
+        
+        <p className="font-bold mt-1">
           ${item.price}{"/晚"}
         </p>
       </CardContent>
@@ -157,9 +153,7 @@ const FavoriteCard = ({ item, onRemove }) => {
         <Button variant="outline" asChild className="flex-1">
           <Link to={`/listings/${item.listingId}`}>房源详细</Link>
         </Button>
-        <Button asChild className="flex-1">
-          <Link to={`/booking/${item.listingId}`}>现在预订</Link>
-        </Button>
+        
       </CardFooter>
     </Card>
   );

@@ -41,9 +41,19 @@ export const searchListings = async (searchParams) => {
 
 
 // 获取单个房源详情
-export const fetchListing = async (id) => {
+export const fetchListingDetail = async (id) => {
   try {
     const response = await apiClient.get(`/${id}`);
+    return response.data.data;
+  } catch (error) {
+    console.error('Error fetching listing:', error);
+    throw error;
+  }
+};
+
+export const fetchListingSummary = async (id) => {
+  try {
+    const response = await apiClient.get(`/${id}/summary`);
     return response.data.data;
   } catch (error) {
     console.error('Error fetching listing:', error);
@@ -131,3 +141,26 @@ export const getFilteredListings = async (filters) => {
   }
 };
 
+
+
+
+export const fetchListingTypes = async () => {
+  try {
+    const response = await apiClient.get('/listingTypes');
+    return response.data.data;
+  } catch (error) {
+    console.error('获取房屋类型失败:', error);
+    throw error;
+  }
+};
+
+
+export const fetchAmenities = async () => {
+  try {
+    const response = await apiClient.get('/amenities');
+    return response.data.data;
+  } catch (error) {
+    console.error('获取设施选项失败:', error);
+    throw error;
+  }
+};

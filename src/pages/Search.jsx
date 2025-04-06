@@ -3,41 +3,24 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Search as SearchIcon, Filter, ChevronsUpDown, Loader } from "lucide-react";
-import { searchListings } from '@/services/ListingApi';
+import { searchListings, fetchListingTypes, fetchAmenities } from '@/services/ListingApi';
 import { updateFavorite } from '@/services/FavoritesApi';
-import { useAuth } from '@/components/common/AuthProvider';
+import { useAuth } from '@/components/commonComponents/AuthProvider';
 
 
 // 导入拆分的组件
-import PropertyCard from './search/ListingCard';
-import FilterPanel from './search/FilterPanel';
-import { propertyExamples } from '@/components/common/Constants';
-import axios from 'axios';
+import ListingCard from '../components/searchComponents/ListingCard';
+import FilterPanel from '../components/searchComponents/FilterPanel';
 
 // 常量定义
 const DEFAULT_PRICE_RANGE = [0, Infinity];
 const DEFAULT_FILTERS = {
   priceRange: DEFAULT_PRICE_RANGE,
-  propertyType: {
-    house: false,
-    apartment: false,
-    condo: false,
-    villa: false,
-    cabin: false
-  },
+  listingType: {}, // 将从API获取并填充
   bedrooms: 'any',
   bathrooms: 'any',
-  amenities: {
-    wifi: false,
-    kitchen: false,
-    ac: false,
-    washer: false,
-    pool: false,
-    parking: false
-  }
+  amenities: {}  // 将从API获取并填充
 };
-
-
 
 /**
  * 房源搜索页面组件
@@ -51,6 +34,10 @@ const Search = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [filterOptions, setFilterOptions] = useState({
+    listingTypes: [],
+    amenities: []
+  });
   
   // 从URL参数中获取搜索条件
   const [searchCriteria, setSearchCriteria] = useState({
@@ -59,51 +46,58 @@ const Search = () => {
       from: searchParams.get('from') ? new Date(searchParams.get('from')) : null,
       to: searchParams.get('to') ? new Date(searchParams.get('to')) : null
     },
-    guests: {
-      adults: parseInt(searchParams.get('adults') || '1', 10),
-      children: parseInt(searchParams.get('children') || '0', 10),
-      infants: parseInt(searchParams.get('infants') || '0', 10)
-    }
+    guests: parseInt(searchParams.get('guests') || '1', 10),
   });
   
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [searchResults, setSearchResults] = useState([]);
   
-  // 计算应用的过滤器数量
-  const filtersApplied = useMemo(() => {
-    let count = 0;
+  // 获取过滤器选项
+  useEffect(() => {
+    const fetchFilterOptions = async () => {
+      try {
+        const [listingTypesResponse, amenitiesResponse] = await Promise.all([
+          fetchListingTypes(),
+          fetchAmenities()
+        ]);
+        
+        // 更新选项状态
+        setFilterOptions({
+          listingTypes: listingTypesResponse,
+          amenities: amenitiesResponse
+        });
+
+        // 初始化默认过滤器值
+        const initialListingTypes = {};
+        const initialAmenities = {};
+        
+        listingTypesResponse.forEach(type => {
+          initialListingTypes[type.id] = false;
+        });
+        
+        amenitiesResponse.forEach(amenity => {
+          initialAmenities[amenity.id] = false;
+        });
+        
+        // 更新过滤器状态
+        setFilters(prev => ({
+          ...prev,
+          listingType: initialListingTypes,
+          amenities: initialAmenities
+        }));
+      } catch (err) {
+        console.error('获取过滤器选项失败:', err);
+        setError('获取过滤器选项失败。');
+      }
+    };
     
-    // 检查价格范围
-    if (filters.priceRange[0] !== DEFAULT_PRICE_RANGE[0] || 
-        filters.priceRange[1] !== DEFAULT_PRICE_RANGE[1]) {
-      count++;
-    }
-    
-    // 检查房屋类型
-    if (Object.values(filters.propertyType).some(value => value)) {
-      count++;
-    }
-    
-    // 检查卧室数量
-    if (filters.bedrooms !== 'any') {
-      count++;
-    }
-    
-    // 检查浴室数量
-    if (filters.bathrooms !== 'any') {
-      count++;
-    }
-    
-    // 检查设施
-    if (Object.values(filters.amenities).some(value => value)) {
-      count++;
-    }
-    
-    return count;
-  }, [filters]);
+    fetchFilterOptions();
+  }, []);
+  
+
 
   // 构建请求体
-  const constructRequestBody = (criteria, filters) => {
+  const constructRequestBody = (criteria, filters, userId) => {
     // 初始化请求体
     const requestBody = {
       address: criteria.address || null,
@@ -115,13 +109,14 @@ const Search = () => {
       },
       filters: {
         priceRange: filters.priceRange || DEFAULT_PRICE_RANGE,
-        propertyType: Object.keys(filters.propertyType).filter(key => filters.propertyType[key]),
+        listingType: Object.keys(filters.listingType).filter(key => filters.listingType[key]),
         bedrooms: filters.bedrooms !== 'any' ? filters.bedrooms : null,
         bathrooms: filters.bathrooms !== 'any' ? filters.bathrooms : null,
         amenities: Object.keys(filters.amenities).filter(key => filters.amenities[key])
-      }
+      },
+      userId: userId
     };
-  
+    
     // 过滤掉值为 null 或 undefined 的字段
     for (const key in requestBody) {
       if (requestBody[key] === null || requestBody[key] === undefined || 
@@ -133,13 +128,11 @@ const Search = () => {
     return requestBody;
   };
 
-  
-
   // 执行搜索
   const performSearch = useCallback(async (criteria, filterOptions) => {
     // 构建请求体
-    const requestBody = constructRequestBody(criteria, filterOptions);
-  
+    const requestBody = constructRequestBody(criteria, filterOptions, user?.id);
+
     // 判断请求体是否为空
     if (Object.keys(requestBody).length === 0) {
       return; // 如果没有有效的搜索条件，退出
@@ -153,27 +146,28 @@ const Search = () => {
 
       // 确保结果是一个数组
       const validResults = Array.isArray(results) ? results : [];
-      console.log('搜索结果', validResults);
-      // const validResults = propertyExamples;
       setSearchResults(validResults);
 
       if (filterOptions) {
         setShowFilters(false); // 应用过滤器后关闭过滤器面板
       }
     } catch (err) {
-      console.error('Error fetching search results:', err);
-      setError('Failed to load search results. Please try again.');
+      console.error('获取搜索结果失败:', err);
+      setError('获取搜索结果失败。');
       setSearchResults([]); // 失败时清空数据
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [user]);
   
 
   // 页面加载时进行初始搜索
   useEffect(() => {
-    performSearch(searchCriteria, DEFAULT_FILTERS);
-  }, []); 
+    // 等待过滤器选项加载完成后执行初始搜索
+    if (Object.keys(filters.listingType).length > 0 && Object.keys(filters.amenities).length > 0) {
+      performSearch(searchCriteria, filters);
+    }
+  }, [filters.listingType, filters.amenities]); 
 
   // 处理过滤器变更
   const handleFilterChange = useCallback((category, name, value) => {
@@ -187,23 +181,32 @@ const Search = () => {
 
   // 清除过滤器
   const clearFilters = useCallback(() => {
-    setFilters(DEFAULT_FILTERS);
-    performSearch(searchCriteria, DEFAULT_FILTERS);
-  }, []);
+    // 重置为初始状态，但保留从API获取的选项结构
+    const resetListingTypes = {};
+    const resetAmenities = {};
+    
+    Object.keys(filters.listingType).forEach(key => {
+      resetListingTypes[key] = false;
+    });
+    
+    Object.keys(filters.amenities).forEach(key => {
+      resetAmenities[key] = false;
+    });
+    
+    const resetFilters = {
+      ...DEFAULT_FILTERS,
+      listingType: resetListingTypes,
+      amenities: resetAmenities
+    };
+    
+    setFilters(resetFilters);
+    performSearch(searchCriteria, resetFilters);
+  }, [filters.listingType, filters.amenities, searchCriteria, performSearch]);
   
 
   // 应用过滤器
   const applyFilters = useCallback(() => {
-    // 构建过滤器参数
-    const filterOptions = {
-      priceRange: filters.priceRange,
-      propertyType: Object.keys(filters.propertyType).filter(key => filters.propertyType[key]),
-      bedrooms: filters.bedrooms !== 'any' ? filters.bedrooms : null,
-      bathrooms: filters.bathrooms !== 'any' ? filters.bathrooms : null,
-      amenities: Object.keys(filters.amenities).filter(key => filters.amenities[key])
-    };
-    
-    performSearch(searchCriteria, filterOptions);
+    performSearch(searchCriteria, filters);
   }, [searchCriteria, filters, performSearch]);
 
   // 切换收藏状态
@@ -230,10 +233,44 @@ const Search = () => {
       // 可以添加一些用户通知，如错误提示
       console.error('收藏状态更新失败');
     }
-  }, [searchResults]);
+  }, [searchResults, user]);
+
+    // 计算应用的过滤器数量
+    const filtersApplied = useMemo(() => {
+      let count = 0;
+      
+      // 检查价格范围
+      if (filters.priceRange[0] !== DEFAULT_PRICE_RANGE[0] || 
+          filters.priceRange[1] !== DEFAULT_PRICE_RANGE[1]) {
+        count++;
+      }
+      
+      // 检查房屋类型
+      if (Object.values(filters.listingType).some(value => value)) {
+        count++;
+      }
+      
+      // 检查卧室数量
+      if (filters.bedrooms !== 'any') {
+        count++;
+      }
+      
+      // 检查浴室数量
+      if (filters.bathrooms !== 'any') {
+        count++;
+      }
+      
+      // 检查设施
+      if (Object.values(filters.amenities).some(value => value)) {
+        count++;
+      }
+      
+      return count;
+    }, [filters]);
 
   // 跳转到房源详情
-  const navigateToProperty = useCallback((id) => {
+  const navigateToListing = useCallback((id) => {
+    
     navigate(`/listings/${id}`);
   }, [navigate]);
 
@@ -277,22 +314,15 @@ const Search = () => {
           <p className="text-gray-600">
             Showing {searchResults.length} properties
           </p>
-          
-          <div className="flex items-center gap-2">
-            <span className="text-sm">Sort by:</span>
-            <Button variant="outline" size="sm" className="flex items-center">
-              Recommended <ChevronsUpDown className="ml-2 h-4 w-4" />
-            </Button>
-          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {searchResults.map((property) => (
-            <PropertyCard 
-              key={property.id} 
-              property={property} 
+          {searchResults.map((listing) => (
+            <ListingCard 
+              key={listing.id} 
+              listing={listing} 
               onFavoriteToggle={toggleFavorite}
-              onCardClick={navigateToProperty}
+              onCardClick={navigateToListing}
             />
           ))}
         </div>
@@ -323,6 +353,7 @@ const Search = () => {
       {showFilters && (
         <FilterPanel 
           filters={filters}
+          filterOptions={filterOptions}
           handleFilterChange={handleFilterChange}
           clearFilters={clearFilters}
           applyFilters={applyFilters}

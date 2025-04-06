@@ -61,7 +61,7 @@ return (
       </div>
 
       {/* 最近交易 */}
-      <Card>
+      {/* <Card>
         <CardHeader>
           <CardTitle>最近交易</CardTitle>
           <p className="text-sm text-gray-500">查看最近的租金收入</p>
@@ -82,7 +82,7 @@ return (
             ))}
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
     </div>
   );
 };
